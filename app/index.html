@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>A medias</title>
+  <meta name="description" content="Gastos comunes de Elena y Nacho: quién ha pagado qué y a quién le toca.">
+  <meta name="theme-color" content="#F2F3F5" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0E0F12" media="(prefers-color-scheme: dark)">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='12' cy='16' r='9' fill='%23FF5F3D'/%3E%3Ccircle cx='20' cy='16' r='9' fill='%232F6BFF' fill-opacity='.85'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;600&family=Onest:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Pantalla de acceso -->
+  <main class="gate" id="gate" hidden>
+    <div class="gate-card">
+      <div class="brand"><span class="mark" aria-hidden="true"><i></i><i></i></span>a medias</div>
+      <div id="gate-form-wrap">
+        <h1>Las cuentas claras.</h1>
+        <p class="lead">Escribe tu email y te mandamos un enlace para entrar. Sin contraseñas.</p>
+        <form id="gate-form" class="gate-form" novalidate>
+          <label class="field-label" for="gate-email">Email</label>
+          <input id="gate-email" type="email" autocomplete="email" placeholder="tu@email.com" required>
+          <button class="btn-primary" type="submit" id="gate-submit">Enviarme el enlace</button>
+          <p class="form-error" id="gate-error" role="alert" hidden></p>
+        </form>
+      </div>
+      <div id="gate-sent" hidden>
+        <h1>Mira tu correo.</h1>
+        <p class="lead">Te hemos enviado un enlace a <b id="gate-sent-email"></b>. Ábrelo en este mismo navegador para entrar.</p>
+        <button class="btn-ghost" type="button" id="gate-back">Usar otro email</button>
+      </div>
+    </div>
+  </main>
+
+  <!-- Pantalla sin configurar -->
+  <main class="gate" id="setup" hidden>
+    <div class="gate-card">
+      <div class="brand"><span class="mark" aria-hidden="true"><i></i><i></i></span>a medias</div>
+      <h1>Falta conectar la base de datos.</h1>
+      <p class="lead">Rellena la URL y la clave de Supabase en <code>app/config.js</code>. Los pasos están en el README del repositorio.</p>
+    </div>
+  </main>
+
+  <!-- App -->
+  <div class="app" id="app" hidden>
+    <header class="topbar">
+      <div class="topbar-in">
+        <div class="brand"><span class="mark" aria-hidden="true"><i></i><i></i></span>a medias</div>
+        <div class="account">
+          <span class="account-email" id="account-email"></span>
+          <button class="btn-ghost sm" type="button" id="sign-out">Salir</button>
+        </div>
+      </div>
+    </header>
+
+    <div class="shell">
+      <!-- Columna izquierda: turno + nuevo gasto -->
+      <aside class="side">
+        <section class="turn" id="turn" aria-labelledby="t-title">
+          <span class="eyebrow">Próximo pago</span>
+          <h1 id="t-title"><span class="sk" style="display:inline-block;width:70%;height:2rem"></span></h1>
+          <p id="t-sub">&nbsp;</p>
+          <div class="seesaw" aria-hidden="true">
+            <div class="ground"></div><div class="fulcrum"></div>
+            <div class="plank" id="plank">
+              <div class="seat l"><span class="av e" id="seat-elena">E</span></div>
+              <div class="seat r"><span class="av n" id="seat-nacho">N</span></div>
+            </div>
+          </div>
+          <div class="tally num">
+            <div><small id="tl-elena-l">Elena ha pagado</small><b id="tl-elena">0,00 €</b></div>
+            <div><small id="tl-nacho-l">Nacho ha pagado</small><b id="tl-nacho">0,00 €</b></div>
+          </div>
+        </section>
+
+        <form class="card add" id="add-form" autocomplete="off" novalidate>
+          <div class="card-h"><h2>Nuevo gasto</h2><kbd title="Atajo de teclado">N</kbd></div>
+          <div class="amount" id="add-amount-wrap">
+            <input id="add-amount" inputmode="decimal" placeholder="0,00" aria-label="Importe en euros">
+            <span aria-hidden="true">€</span>
+          </div>
+          <fieldset class="group">
+            <legend>Pagado por</legend>
+            <div class="payer" id="add-payer"></div>
+          </fieldset>
+          <fieldset class="group">
+            <legend>Categoría <span class="opt">opcional</span></legend>
+            <div class="chips" id="add-cats"></div>
+          </fieldset>
+          <fieldset class="group">
+            <legend>Fecha</legend>
+            <div class="when">
+              <button type="button" class="chip" id="add-today">Hoy</button>
+              <button type="button" class="chip" id="add-yesterday">Ayer</button>
+              <input type="date" id="add-date" class="date" aria-label="Fecha del gasto">
+            </div>
+          </fieldset>
+          <button class="btn-primary" type="submit" id="add-submit" disabled>Apuntar gasto</button>
+        </form>
+      </aside>
+
+      <!-- Columna derecha: movimientos y resumen -->
+      <main class="main">
+        <div class="tabs" role="tablist" aria-label="Vistas">
+          <span class="pill" id="tabs-pill"></span>
+          <button role="tab" id="tab-movs" aria-selected="true" aria-controls="v-movs">Movimientos</button>
+          <button role="tab" id="tab-res" aria-selected="false" aria-controls="v-res">Resumen</button>
+        </div>
+
+        <section id="v-movs" role="tabpanel" aria-labelledby="tab-movs" class="panel">
+          <div class="filters">
+            <div class="seg" id="f-who"><span class="pill" id="f-pill"></span></div>
+            <div class="chips scroll" id="f-cat"></div>
+          </div>
+          <div class="meta num" id="f-meta"></div>
+          <div class="list" id="list"></div>
+        </section>
+
+        <section id="v-res" role="tabpanel" aria-labelledby="tab-res" class="panel" hidden>
+          <div class="monthnav">
+            <h2 class="h2" id="m-title">Noviembre</h2>
+            <div class="ctrl">
+              <button class="icon-btn" id="m-prev" type="button" aria-label="Mes anterior"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 6-6 6 6 6"/></svg></button>
+              <button class="icon-btn" id="m-next" type="button" aria-label="Mes siguiente"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></button>
+            </div>
+          </div>
+          <div class="res-grid">
+            <div class="card big">
+              <div><div class="lbl">Gasto en común</div><div class="total num" id="s-tot">0,00 €</div></div>
+              <div class="split"><i class="e" id="sp-elena"></i><i class="n" id="sp-nacho"></i></div>
+              <div class="who-row num" id="s-who"></div>
+              <p class="note" id="s-note"></p>
+            </div>
+            <div class="card cats num" id="s-cats"></div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <div id="layer"></div>
+  <div id="toast-root" aria-live="polite"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

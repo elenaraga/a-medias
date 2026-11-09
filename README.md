@@ -21,16 +21,16 @@ Todos los gastos se reparten al 50 %. La app suma lo que ha pagado cada uno desd
    insert into public.miembros (email) values ('email-de-elena@ejemplo.com'), ('email-de-nacho@ejemplo.com');
    ```
 
-### 2. Dar de alta a los dos usuarios
+### 2. Acceso
 
-En **Authentication > Users > Add user > Send invitation**, invita a los mismos dos emails. La app no permite que nadie más se registre.
+No hace falta invitar a nadie. Cada uno entra en la web, escribe su email y recibe un enlace. Solo los emails de la tabla `miembros` pueden ver y apuntar gastos; cualquier otro ve un aviso de que no tiene acceso.
 
 ### 3. Configurar el acceso por email
 
 En **Authentication > URL Configuration**:
 
-- **Site URL:** `https://<tu-usuario>.github.io/a-medias/`
-- **Redirect URLs:** añade la misma dirección. Si quieres probar en local, añade también `http://localhost:8000/`.
+- **Site URL:** `https://elenaraga.github.io/a-medias/`
+- **Redirect URLs:** si quieres probar en local, añade `http://localhost:8000/`.
 
 ### 4. Conectar la web
 

@@ -60,7 +60,7 @@ kbd{font-family:var(--body);font-size:.72rem;font-weight:600;color:var(--muted);
 .gate-form input{height:50px;border-radius:14px;border:1.5px solid var(--line);background:var(--surface);padding:0 16px;font-size:1rem;outline:none;transition:border-color .15s}
 .gate-form input:focus{border-color:var(--focus)}
 .form-error{color:var(--elena);font-size:.88rem;margin:0}
-#gate-sent .btn-ghost{margin-top:20px;margin-left:-14px}
+#gate-sent .btn-ghost,#gate-denied .btn-ghost{margin-top:20px;margin-left:-14px}
 
 /* Top bar */
 .topbar{position:sticky;top:0;z-index:5;background:color-mix(in srgb,var(--bg) 86%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}

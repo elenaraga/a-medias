@@ -404,7 +404,7 @@
   /* ---------- Acceso ---------- */
   function showGate() {
     $("app").hidden = true; $("setup").hidden = true; $("gate").hidden = false;
-    $("gate-form-wrap").hidden = false; $("gate-sent").hidden = true;
+    $("gate-form-wrap").hidden = false; $("gate-sent").hidden = true; $("gate-denied").hidden = true;
     setTimeout(() => $("gate-email").focus(), 30);
   }
   $("gate-form").addEventListener("submit", async (e) => {
@@ -417,14 +417,11 @@
     btn.disabled = true; btn.textContent = "Enviando…";
     const { error } = await sb.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: location.origin + location.pathname, shouldCreateUser: false },
+      options: { emailRedirectTo: location.origin + location.pathname, shouldCreateUser: true },
     });
     btn.disabled = false; btn.textContent = "Enviarme el enlace";
     if (error) {
-      const notAllowed = /signups not allowed|not found|invalid/i.test(error.message || "");
-      err.textContent = notAllowed
-        ? "Este email no tiene acceso a A medias."
-        : /rate|seconds/i.test(error.message || "")
+      err.textContent = /rate|seconds/i.test(error.message || "")
           ? "Has pedido varios enlaces seguidos. Espera un minuto y vuelve a probar."
           : "No se ha podido enviar el enlace. Prueba de nuevo.";
       err.hidden = false;
@@ -434,10 +431,20 @@
     $("gate-form-wrap").hidden = true; $("gate-sent").hidden = false;
   });
   $("gate-back").onclick = showGate;
+  $("gate-denied-out").onclick = async () => { await sb.auth.signOut(); };
   $("sign-out").onclick = async () => { await sb.auth.signOut(); };
 
   let channel = null;
-  function startApp(session) {
+  async function startApp(session) {
+    // Solo los emails de la lista de miembros pueden usar la app
+    const { data: ok, error } = await sb.rpc("es_miembro");
+    if (error || ok !== true) {
+      $("app").hidden = true; $("setup").hidden = true; $("gate").hidden = false;
+      $("gate-form-wrap").hidden = true; $("gate-sent").hidden = true; $("gate-denied").hidden = false;
+      $("gate-denied-email").textContent = session.user.email || "";
+      return;
+    }
+    $("gate-denied").hidden = true;
     $("gate").hidden = true; $("setup").hidden = true; $("app").hidden = false;
     $("account-email").textContent = session.user.email || "";
     $("tl-elena-l").textContent = `${NAME.elena} ha pagado`;

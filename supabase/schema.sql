@@ -45,6 +45,8 @@ as $$
   );
 $$;
 
+grant execute on function public.es_miembro() to authenticated;
+
 -- 3. Seguridad: solo los miembros leen y escriben gastos
 alter table public.gastos enable row level security;
 

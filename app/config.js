@@ -3,7 +3,7 @@
 // los datos los protegen el login y las reglas de seguridad de la base de datos.
 // Las encontraréis en Supabase > Project Settings > API.
 window.A_MEDIAS_CONFIG = {
-  supabaseUrl: "",      // p. ej. "https://abcdefgh.supabase.co"
+  supabaseUrl: "https://gkebcwyfojruzhxjwmct.supabase.co",
   supabaseAnonKey: "",  // la clave "anon public"
   people: {
     elena: "Elena",

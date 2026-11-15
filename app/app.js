@@ -43,17 +43,6 @@
     const v = Math.round(Number(s) * 100);
     return v > 0 && v < 100000000 ? v : NaN;
   }
-  // Fecha elegida (yyyy-mm-dd) -> timestamp: hoy usa la hora actual; otro día conserva la hora original o mediodía
-  function tsFromDate(dateStr, keepFrom) {
-    const [Y, M, D] = dateStr.split("-").map(Number);
-    const now = new Date();
-    const d = new Date(Y, M - 1, D);
-    if (keepFrom && sameDay(d, keepFrom)) return keepFrom.toISOString();
-    if (sameDay(d, now)) return now.toISOString();
-    const src = keepFrom || new Date(Y, M - 1, D, 12, 0);
-    d.setHours(src.getHours(), src.getMinutes(), 0, 0);
-    return d.toISOString();
-  }
 
   /* ---------- Estado ---------- */
   let sb = null;
@@ -62,7 +51,7 @@
   let knownIds = new Set();
   let fWho = "todos", fCat = "todas", fText = "", view = "movs";
   const month = new Date(); month.setDate(1);
-  const add = { payer: null, payerTouched: false, cat: null, date: ymd(new Date()) };
+  const add = { payer: null, payerTouched: false, cat: null };
 
   /* ---------- Toast ---------- */
   let toastTimer;
@@ -207,26 +196,19 @@
   function renderAddForm() {
     renderPayer($("add-payer"), add, (p) => { add.payer = p; add.payerTouched = true; renderAddForm(); });
     renderCats($("add-cats"), add.cat, (id) => { add.cat = add.cat === id ? null : id; renderAddForm(); });
-    const dIn = $("add-date");
-    dIn.value = add.date; dIn.max = ymd(new Date());
-    $("add-today").setAttribute("aria-pressed", String(add.date === ymd(new Date())));
-    $("add-yesterday").setAttribute("aria-pressed", String(add.date === ymd(yesterday())));
-    $("add-submit").disabled = !(parseAmount(amountIn.value) > 0 && add.payer && add.date);
+    $("add-submit").disabled = !(parseAmount(amountIn.value) > 0 && add.payer);
   }
   amountIn.addEventListener("input", renderAddForm);
-  $("add-today").onclick = () => { add.date = ymd(new Date()); renderAddForm(); };
-  $("add-yesterday").onclick = () => { add.date = ymd(yesterday()); renderAddForm(); };
-  $("add-date").onchange = (e) => { if (e.target.value) { add.date = e.target.value; renderAddForm(); } };
   $("add-form").addEventListener("submit", async (e) => {
     e.preventDefault();
     const amount = parseAmount(amountIn.value);
     if (!(amount > 0)) { shake($("add-amount-wrap")); amountIn.focus(); return; }
     if (!add.payer) { shake($("add-payer")); return; }
-    const x = { amount, payer: add.payer, cat: add.cat || "otros", name: $("add-name").value, ts: tsFromDate(add.date) };
+    const x = { amount, payer: add.payer, cat: add.cat || "otros", name: $("add-name").value, ts: new Date().toISOString() };
     $("add-submit").disabled = true;
     try {
       const row = await run(api.insert(x));
-      amountIn.value = ""; $("add-name").value = ""; add.cat = null; add.payerTouched = false; add.date = ymd(new Date());
+      amountIn.value = ""; $("add-name").value = ""; add.cat = null; add.payerTouched = false;
       toast(`${cleanName(x.name) ? cleanName(x.name) + " · " : ""}${money(amount)} · pagó ${NAME[x.payer]}`, {
         label: "Deshacer",
         fn: () => run(api.remove(row.id)).then(load).catch(fail("No se ha podido deshacer.")),
@@ -362,7 +344,7 @@
     setTimeout(() => s.remove(), 180);
   }
   function openEdit(x) {
-    const st = { payer: x.payer, cat: x.cat, date: ymd(x.ts) };
+    const st = { payer: x.payer, cat: x.cat };
     const trigger = document.activeElement;
     const scrim = document.createElement("div");
     scrim.className = "scrim";
@@ -372,22 +354,19 @@
       <label class="name-field"><span class="sr-only">Nombre del gasto</span><input id="ed-name" maxlength="80" placeholder="Nombre del gasto (opcional)" list="name-suggestions" autocapitalize="sentences" enterkeyhint="next"></label>
       <fieldset class="group"><legend>Pagado por</legend><div class="payer" id="ed-payer"></div></fieldset>
       <fieldset class="group"><legend>Categoría</legend><div class="chips" id="ed-cats"></div></fieldset>
-      <fieldset class="group"><legend>Fecha</legend><div class="when"><input type="date" id="ed-date" class="date" aria-label="Fecha del gasto"></div></fieldset>
       <div class="modal-actions"><button type="button" class="btn-danger" id="ed-del">Borrar</button><button class="btn-primary" type="submit" id="ed-save">Guardar cambios</button></div>
     </form>`;
     $("layer").appendChild(scrim);
     const q = (s) => scrim.querySelector(s);
-    const amt = q("#ed-amount"), dIn = q("#ed-date"), nameIn = q("#ed-name");
+    const amt = q("#ed-amount"), nameIn = q("#ed-name");
     nameIn.value = x.name || "";
     amt.value = (x.amount / 100).toFixed(2).replace(".", ",");
-    dIn.value = st.date; dIn.max = ymd(new Date());
     const paint = () => {
       renderPayer(q("#ed-payer"), st, (p) => { st.payer = p; paint(); });
       renderCats(q("#ed-cats"), st.cat, (id) => { st.cat = id; paint(); });
-      q("#ed-save").disabled = !(parseAmount(amt.value) > 0 && dIn.value);
+      q("#ed-save").disabled = !(parseAmount(amt.value) > 0);
     };
     amt.addEventListener("input", paint);
-    dIn.addEventListener("change", paint);
     const close = () => { closeModal(); if (trigger && trigger.focus) trigger.focus(); };
     q("#ed-close").onclick = close;
     scrim.addEventListener("mousedown", (e) => { if (e.target === scrim) close(); });
@@ -406,7 +385,7 @@
       e.preventDefault();
       const amount = parseAmount(amt.value);
       if (!(amount > 0)) { shake(q("#ed-amount-wrap")); return; }
-      const next = { amount, payer: st.payer, cat: st.cat, name: nameIn.value, ts: tsFromDate(dIn.value, x.ts) };
+      const next = { amount, payer: st.payer, cat: st.cat, name: nameIn.value, ts: x.ts.toISOString() };
       q("#ed-save").disabled = true;
       try {
         await run(api.update(x.id, next));

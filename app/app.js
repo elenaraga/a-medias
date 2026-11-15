@@ -49,7 +49,7 @@
   let items = [];        // {id, amount, payer, cat, ts(Date)}
   let loaded = false;
   let knownIds = new Set();
-  let fWho = "todos", fCat = "todas", fText = "", view = "movs";
+  let view = "movs";
   const month = new Date(); month.setDate(1);
   const add = { payer: null, payerTouched: false, cat: null };
 
@@ -101,13 +101,6 @@
 
   /* ---------- Nombres ---------- */
   const norm = (s) => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
-  // Resalta la búsqueda dentro del título sin romper el escapado
-  function hl(text, needle) {
-    if (!needle) return esc(text);
-    const i = norm(text).indexOf(needle);
-    if (i < 0) return esc(text);
-    return esc(text.slice(0, i)) + "<mark>" + esc(text.slice(i, i + needle.length)) + "</mark>" + esc(text.slice(i + needle.length));
-  }
   // Sugerencias: los nombres usados, del más frecuente al menos
   function renderSuggestions() {
     const count = {};
@@ -121,11 +114,6 @@
     if (!n || add.cat) return;
     const prev = items.find((x) => norm(x.name) === n);
     if (prev && prev.cat && prev.cat !== "otros") { add.cat = prev.cat; renderAddForm(); }
-  });
-  let searchTimer;
-  $("f-search").addEventListener("input", (e) => {
-    clearTimeout(searchTimer);
-    searchTimer = setTimeout(() => { fText = e.target.value; renderList(); }, 120);
   });
 
   /* ---------- Turno ---------- */
@@ -178,13 +166,13 @@
       box.appendChild(b);
     });
   }
-  function renderCats(box, sel, onPick, withAll) {
+  function renderCats(box, sel, onPick) {
     box.innerHTML = "";
-    (withAll ? [{ id: "todas", n: "Todas" }] : []).concat(CATS).forEach((c) => {
+    CATS.forEach((c) => {
       const b = document.createElement("button");
       b.type = "button"; b.className = "chip"; b.id = box.id + "-" + c.id;
       b.setAttribute("aria-pressed", String(sel === c.id));
-      b.innerHTML = (c.id !== "todas" ? icon(c.id) : "") + esc(c.n);
+      b.innerHTML = icon(c.id) + esc(c.n);
       b.onclick = () => onPick(c.id);
       box.appendChild(b);
     });
@@ -233,36 +221,17 @@
     return `<div class="empty"><div class="dots"><i></i><i></i></div><b>${esc(title)}</b><span>${esc(text)}</span></div>`;
   }
   function renderList(fresh) {
-    const segBox = $("f-who");
-    if (!segBox.querySelector("button")) {
-      [["todos", "Todos"], ["elena", NAME.elena], ["nacho", NAME.nacho]].forEach(([k, n]) => {
-        const b = document.createElement("button");
-        b.type = "button"; b.id = "fw-" + k; b.dataset.w = k; b.textContent = n;
-        b.onclick = () => { fWho = k; renderList(); };
-        segBox.appendChild(b);
-      });
-    }
-    ["todos", "elena", "nacho"].forEach((k, i) => {
-      $("fw-" + k).setAttribute("aria-pressed", String(fWho === k));
-      if (fWho === k) $("f-pill").style.transform = `translateX(${i * 100}%)`;
-    });
-    renderCats($("f-cat"), fCat, (id) => { fCat = id; renderList(); }, true);
-
     const box = $("list");
     if (!loaded) {
       box.innerHTML = Array.from({ length: 4 }, () => '<div class="sk-row"><span class="sk" style="width:42px;height:42px;border-radius:13px"></span><span style="display:flex;flex-direction:column;gap:6px"><span class="sk" style="width:45%;height:12px"></span><span class="sk" style="width:30%;height:10px"></span></span><span class="sk" style="height:14px"></span></div>').join("");
       $("f-meta").textContent = "";
       return;
     }
-    const needle = norm(fText);
-    const l = items.filter((x) => (fWho === "todos" || x.payer === fWho) && (fCat === "todas" || x.cat === fCat)
-      && (!needle || norm(x.name || "").includes(needle) || norm((CAT[x.cat] || CAT.otros).n).includes(needle)));
+    const l = items;
     $("f-meta").innerHTML = items.length ? `<b>${l.length}</b> ${l.length === 1 ? "gasto" : "gastos"} · <b>${money(l.reduce((s, x) => s + x.amount, 0))}</b>` : "";
     box.innerHTML = "";
     if (!l.length) {
-      box.innerHTML = items.length
-        ? emptyHTML(needle ? `Nada que coincida con “${fText.trim()}”` : "Nada con este filtro", needle ? "Prueba con otra palabra o quita algún filtro." : "Prueba con otra persona o categoría.")
-        : emptyHTML("Aún no hay gastos", "Apunta el primero en el formulario. El balancín hará el resto.");
+      box.innerHTML = emptyHTML("Aún no hay gastos", "Apunta el primero en el formulario. El balancín hará el resto.");
       return;
     }
     const dayTotals = {};
@@ -283,7 +252,7 @@
       const title = x.name || c.n;
       b.setAttribute("aria-label", `${title}, ${money(x.amount)}, pagó ${NAME[x.payer]}. Editar`);
       b.innerHTML = `<span class="tile">${icon(c.id)}<span class="av xs ${CLS[x.payer]}">${esc(INI[x.payer])}</span></span>
-        <span class="t"><b>${hl(title, needle)}</b><small>${x.name ? esc(c.n) + " · " : ""}Pagó ${esc(NAME[x.payer])} · ${timeFmt.format(x.ts)}</small></span>
+        <span class="t"><b>${esc(title)}</b><small>${x.name ? esc(c.n) + " · " : ""}Pagó ${esc(NAME[x.payer])} · ${timeFmt.format(x.ts)}</small></span>
         <span class="a num">${money(x.amount)}</span>
         <span class="edit" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></svg></span>`;
       b.onclick = () => openEdit(x);

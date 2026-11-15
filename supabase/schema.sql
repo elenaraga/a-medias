@@ -9,10 +9,14 @@ create table if not exists public.gastos (
   category    text not null default 'otros'
               check (category in ('super', 'fuera', 'ocio', 'casa', 'transporte', 'otros')),
   spent_at    timestamptz not null default now(),
+  name        text check (name is null or char_length(name) <= 80),
   created_by  uuid default auth.uid() references auth.users (id) on delete set null,
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now()
 );
+
+-- Para proyectos creados antes de añadir el nombre:
+alter table public.gastos add column if not exists name text check (name is null or char_length(name) <= 80);
 
 create index if not exists gastos_spent_at_idx on public.gastos (spent_at desc);
 

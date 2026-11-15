@@ -88,6 +88,8 @@
             <input id="add-amount" inputmode="decimal" placeholder="0,00" aria-label="Importe en euros">
             <span aria-hidden="true">€</span>
           </div>
+          <label class="name-field"><span class="sr-only">Nombre del gasto</span><input id="add-name" maxlength="80" placeholder="Nombre del gasto (opcional)" list="name-suggestions" autocapitalize="sentences" enterkeyhint="next"></label>
+          <datalist id="name-suggestions"></datalist>
           <fieldset class="group">
             <legend>Pagado por</legend>
             <div class="payer" id="add-payer"></div>
@@ -117,6 +119,7 @@
         </div>
 
         <section id="v-movs" role="tabpanel" aria-labelledby="tab-movs" class="panel">
+          <label class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg><span class="sr-only">Buscar por nombre</span><input id="f-search" type="search" placeholder="Buscar por nombre" autocomplete="off"></label>
           <div class="filters">
             <div class="seg" id="f-who"><span class="pill" id="f-pill"></span></div>
             <div class="chips scroll" id="f-cat"></div>

@@ -60,7 +60,7 @@
   let items = [];        // {id, amount, payer, cat, ts(Date)}
   let loaded = false;
   let knownIds = new Set();
-  let fWho = "todos", fCat = "todas", view = "movs";
+  let fWho = "todos", fCat = "todas", fText = "", view = "movs";
   const month = new Date(); month.setDate(1);
   const add = { payer: null, payerTouched: false, cat: null, date: ymd(new Date()) };
 
@@ -86,16 +86,18 @@
   const fail = (msg) => (err) => { console.error(err); toast(msg || "No se ha podido guardar. Revisa la conexión.", null, true); };
 
   /* ---------- Datos ---------- */
-  const fromRow = (r) => ({ id: r.id, amount: r.amount_cents, payer: r.payer, cat: r.category, ts: new Date(r.spent_at) });
-  const toRow = (x) => ({ amount_cents: x.amount, payer: x.payer, category: x.cat || "otros", spent_at: x.ts });
+  const cleanName = (s) => { const t = String(s || "").replace(/\s+/g, " ").trim().slice(0, 80); return t || null; };
+  const fromRow = (r) => ({ id: r.id, amount: r.amount_cents, payer: r.payer, cat: r.category, name: r.name || null, ts: new Date(r.spent_at) });
+  const toRow = (x) => ({ amount_cents: x.amount, payer: x.payer, category: x.cat || "otros", name: cleanName(x.name), spent_at: x.ts });
 
   async function load() {
-    const { data, error } = await sb.from("gastos").select("id,amount_cents,payer,category,spent_at").order("spent_at", { ascending: false });
+    const { data, error } = await sb.from("gastos").select("id,amount_cents,payer,category,name,spent_at").order("spent_at", { ascending: false });
     if (error) { fail("No se han podido cargar los gastos.")(error); return; }
     const fresh = loaded ? new Set(data.map((r) => r.id).filter((id) => !knownIds.has(id))) : new Set();
     items = data.map(fromRow).filter((x) => NAME[x.payer]);
     knownIds = new Set(items.map((x) => x.id));
     loaded = true;
+    renderSuggestions();
     renderAll(fresh);
   }
   let reloadTimer;
@@ -107,6 +109,35 @@
     remove: (id) => sb.from("gastos").delete().eq("id", id),
   };
   async function run(p, msg) { const { data, error } = await p; if (error) throw Object.assign(new Error(msg), { cause: error }); return data; }
+
+  /* ---------- Nombres ---------- */
+  const norm = (s) => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+  // Resalta la búsqueda dentro del título sin romper el escapado
+  function hl(text, needle) {
+    if (!needle) return esc(text);
+    const i = norm(text).indexOf(needle);
+    if (i < 0) return esc(text);
+    return esc(text.slice(0, i)) + "<mark>" + esc(text.slice(i, i + needle.length)) + "</mark>" + esc(text.slice(i + needle.length));
+  }
+  // Sugerencias: los nombres usados, del más frecuente al menos
+  function renderSuggestions() {
+    const count = {};
+    items.forEach((x) => { if (x.name) count[x.name] = (count[x.name] || 0) + 1; });
+    const names = Object.keys(count).sort((a, b) => count[b] - count[a]).slice(0, 30);
+    $("name-suggestions").innerHTML = names.map((n) => `<option value="${esc(n)}"></option>`).join("");
+  }
+  // Si eliges un nombre ya usado, propone su categoría habitual
+  $("add-name").addEventListener("change", (e) => {
+    const n = norm(e.target.value);
+    if (!n || add.cat) return;
+    const prev = items.find((x) => norm(x.name) === n);
+    if (prev && prev.cat && prev.cat !== "otros") { add.cat = prev.cat; renderAddForm(); }
+  });
+  let searchTimer;
+  $("f-search").addEventListener("input", (e) => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => { fText = e.target.value; renderList(); }, 120);
+  });
 
   /* ---------- Turno ---------- */
   function totals(list) {
@@ -191,12 +222,12 @@
     const amount = parseAmount(amountIn.value);
     if (!(amount > 0)) { shake($("add-amount-wrap")); amountIn.focus(); return; }
     if (!add.payer) { shake($("add-payer")); return; }
-    const x = { amount, payer: add.payer, cat: add.cat || "otros", ts: tsFromDate(add.date) };
+    const x = { amount, payer: add.payer, cat: add.cat || "otros", name: $("add-name").value, ts: tsFromDate(add.date) };
     $("add-submit").disabled = true;
     try {
       const row = await run(api.insert(x));
-      amountIn.value = ""; add.cat = null; add.payerTouched = false; add.date = ymd(new Date());
-      toast(`${money(amount)} · pagó ${NAME[x.payer]}`, {
+      amountIn.value = ""; $("add-name").value = ""; add.cat = null; add.payerTouched = false; add.date = ymd(new Date());
+      toast(`${cleanName(x.name) ? cleanName(x.name) + " · " : ""}${money(amount)} · pagó ${NAME[x.payer]}`, {
         label: "Deshacer",
         fn: () => run(api.remove(row.id)).then(load).catch(fail("No se ha podido deshacer.")),
       });
@@ -241,12 +272,14 @@
       $("f-meta").textContent = "";
       return;
     }
-    const l = items.filter((x) => (fWho === "todos" || x.payer === fWho) && (fCat === "todas" || x.cat === fCat));
+    const needle = norm(fText);
+    const l = items.filter((x) => (fWho === "todos" || x.payer === fWho) && (fCat === "todas" || x.cat === fCat)
+      && (!needle || norm(x.name || "").includes(needle) || norm((CAT[x.cat] || CAT.otros).n).includes(needle)));
     $("f-meta").innerHTML = items.length ? `<b>${l.length}</b> ${l.length === 1 ? "gasto" : "gastos"} · <b>${money(l.reduce((s, x) => s + x.amount, 0))}</b>` : "";
     box.innerHTML = "";
     if (!l.length) {
       box.innerHTML = items.length
-        ? emptyHTML("Nada con este filtro", "Prueba con otra persona o categoría.")
+        ? emptyHTML(needle ? `Nada que coincida con “${fText.trim()}”` : "Nada con este filtro", needle ? "Prueba con otra palabra o quita algún filtro." : "Prueba con otra persona o categoría.")
         : emptyHTML("Aún no hay gastos", "Apunta el primero en el formulario. El balancín hará el resto.");
       return;
     }
@@ -265,9 +298,10 @@
       const c = CAT[x.cat] || CAT.otros;
       const b = document.createElement("button");
       b.type = "button"; b.className = "row" + (fresh && fresh.has(x.id) ? " new" : "");
-      b.setAttribute("aria-label", `${c.n}, ${money(x.amount)}, pagó ${NAME[x.payer]}. Editar`);
+      const title = x.name || c.n;
+      b.setAttribute("aria-label", `${title}, ${money(x.amount)}, pagó ${NAME[x.payer]}. Editar`);
       b.innerHTML = `<span class="tile">${icon(c.id)}<span class="av xs ${CLS[x.payer]}">${esc(INI[x.payer])}</span></span>
-        <span class="t"><b>${esc(c.n)}</b><small>Pagó ${esc(NAME[x.payer])} · ${timeFmt.format(x.ts)}</small></span>
+        <span class="t"><b>${hl(title, needle)}</b><small>${x.name ? esc(c.n) + " · " : ""}Pagó ${esc(NAME[x.payer])} · ${timeFmt.format(x.ts)}</small></span>
         <span class="a num">${money(x.amount)}</span>
         <span class="edit" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></svg></span>`;
       b.onclick = () => openEdit(x);
@@ -335,6 +369,7 @@
     scrim.innerHTML = `<form class="modal" role="dialog" aria-modal="true" aria-labelledby="ed-title" autocomplete="off" novalidate>
       <div class="modal-h"><h2 id="ed-title">Editar gasto</h2><button type="button" class="close" id="ed-close" aria-label="Cerrar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
       <div class="amount" id="ed-amount-wrap"><input id="ed-amount" inputmode="decimal" aria-label="Importe en euros"><span aria-hidden="true">€</span></div>
+      <label class="name-field"><span class="sr-only">Nombre del gasto</span><input id="ed-name" maxlength="80" placeholder="Nombre del gasto (opcional)" list="name-suggestions" autocapitalize="sentences" enterkeyhint="next"></label>
       <fieldset class="group"><legend>Pagado por</legend><div class="payer" id="ed-payer"></div></fieldset>
       <fieldset class="group"><legend>Categoría</legend><div class="chips" id="ed-cats"></div></fieldset>
       <fieldset class="group"><legend>Fecha</legend><div class="when"><input type="date" id="ed-date" class="date" aria-label="Fecha del gasto"></div></fieldset>
@@ -342,7 +377,8 @@
     </form>`;
     $("layer").appendChild(scrim);
     const q = (s) => scrim.querySelector(s);
-    const amt = q("#ed-amount"), dIn = q("#ed-date");
+    const amt = q("#ed-amount"), dIn = q("#ed-date"), nameIn = q("#ed-name");
+    nameIn.value = x.name || "";
     amt.value = (x.amount / 100).toFixed(2).replace(".", ",");
     dIn.value = st.date; dIn.max = ymd(new Date());
     const paint = () => {
@@ -365,12 +401,12 @@
       }
     };
     document.addEventListener("keydown", modalKeys);
-    const before = { amount: x.amount, payer: x.payer, cat: x.cat, ts: x.ts.toISOString() };
+    const before = { amount: x.amount, payer: x.payer, cat: x.cat, name: x.name, ts: x.ts.toISOString() };
     q("form").addEventListener("submit", async (e) => {
       e.preventDefault();
       const amount = parseAmount(amt.value);
       if (!(amount > 0)) { shake(q("#ed-amount-wrap")); return; }
-      const next = { amount, payer: st.payer, cat: st.cat, ts: tsFromDate(dIn.value, x.ts) };
+      const next = { amount, payer: st.payer, cat: st.cat, name: nameIn.value, ts: tsFromDate(dIn.value, x.ts) };
       q("#ed-save").disabled = true;
       try {
         await run(api.update(x.id, next));

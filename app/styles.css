@@ -118,6 +118,17 @@ kbd{font-family:var(--body);font-size:.72rem;font-weight:600;color:var(--muted);
 .amount:focus-within{border-color:var(--ink)}
 .amount input{flex:1;min-width:0;border:0;background:none;outline:none;padding:0;font-family:var(--display);font-weight:600;font-size:2.4rem;letter-spacing:-.05em;line-height:1.1}
 .amount input::placeholder{color:var(--line)}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.name-field input{width:100%;height:44px;border:0;border-radius:12px;background:var(--sunk);padding:0 14px;font-size:.98rem;font-weight:500;outline:none;transition:box-shadow .15s,background .15s}
+.name-field input::placeholder{color:var(--muted)}
+.name-field input:focus{background:var(--surface);box-shadow:inset 0 0 0 2px var(--ink)}
+.search{display:flex;align-items:center;gap:10px;height:42px;padding:0 14px;border-radius:12px;background:var(--surface);box-shadow:inset 0 0 0 1px var(--line);color:var(--muted);transition:box-shadow .15s}
+.search:focus-within{box-shadow:inset 0 0 0 2px var(--ink)}
+.search svg{width:18px;height:18px;flex:none}
+.search input{flex:1;min-width:0;border:0;background:none;outline:none;font-size:.92rem;color:var(--ink)}
+.search input::placeholder{color:var(--muted)}
+.search input::-webkit-search-cancel-button{cursor:pointer}
+mark{background:color-mix(in srgb,var(--nacho) 22%,transparent);color:inherit;border-radius:3px;padding:0 1px}
 .amount span{font-family:var(--display);font-weight:500;font-size:1.4rem;color:var(--muted)}
 .amount.shake{animation:shake .35s}
 @keyframes shake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}

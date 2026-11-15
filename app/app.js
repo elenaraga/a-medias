@@ -320,7 +320,7 @@
     scrim.innerHTML = `<form class="modal" role="dialog" aria-modal="true" aria-labelledby="ed-title" autocomplete="off" novalidate>
       <div class="modal-h"><h2 id="ed-title">Editar gasto</h2><button type="button" class="close" id="ed-close" aria-label="Cerrar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
       <div class="amount" id="ed-amount-wrap"><input id="ed-amount" inputmode="decimal" aria-label="Importe en euros"><span aria-hidden="true">€</span></div>
-      <label class="name-field"><span class="sr-only">Nombre del gasto</span><input id="ed-name" maxlength="80" placeholder="Nombre del gasto (opcional)" list="name-suggestions" autocapitalize="sentences" enterkeyhint="next"></label>
+      <label class="name-field"><span class="sr-only">Nombre del gasto</span><input id="ed-name" maxlength="80" placeholder="Nombre del gasto" list="name-suggestions" autocapitalize="sentences" enterkeyhint="next"></label>
       <fieldset class="group"><legend>Pagado por</legend><div class="payer" id="ed-payer"></div></fieldset>
       <fieldset class="group"><legend>Categoría</legend><div class="chips" id="ed-cats"></div></fieldset>
       <div class="modal-actions"><button type="button" class="btn-danger" id="ed-del">Borrar</button><button class="btn-primary" type="submit" id="ed-save">Guardar cambios</button></div>

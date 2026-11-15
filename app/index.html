@@ -88,14 +88,14 @@
             <input id="add-amount" inputmode="decimal" placeholder="0,00" aria-label="Importe en euros">
             <span aria-hidden="true">€</span>
           </div>
-          <label class="name-field"><span class="sr-only">Nombre del gasto</span><input id="add-name" maxlength="80" placeholder="Nombre del gasto (opcional)" list="name-suggestions" autocapitalize="sentences" enterkeyhint="next"></label>
+          <label class="name-field"><span class="sr-only">Nombre del gasto</span><input id="add-name" maxlength="80" placeholder="Nombre del gasto" list="name-suggestions" autocapitalize="sentences" enterkeyhint="next"></label>
           <datalist id="name-suggestions"></datalist>
           <fieldset class="group">
             <legend>Pagado por</legend>
             <div class="payer" id="add-payer"></div>
           </fieldset>
           <fieldset class="group">
-            <legend>Categoría <span class="opt">opcional</span></legend>
+            <legend>Categoría</legend>
             <div class="chips" id="add-cats"></div>
           </fieldset>
           <button class="btn-primary" type="submit" id="add-submit" disabled>Apuntar gasto</button>
